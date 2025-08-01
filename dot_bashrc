@@ -1,0 +1,136 @@
+# This line makes the following remote command in ssh config: { [ -f ~/.bashrc ] && read -r line < ~/.bashrc && [[ "$line" == *"chezmoi"* ]]; } || sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- init --one-shot JulScsl; exec bash -l
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# Default editor
+export EDITOR=vim
+
+# History options
+export HISTCONTROL=$HISTCONTROL:erasedups # Avoid duplicates
+shopt -s histappend # When the shell exits, append to the history file instead of overwriting it
+export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a;" # After each command, append to the history file 
+export HISTSIZE=10000
+export HISTFILESIZE=10000
+export HISTTIMEFORMAT="%Y-%m-%d %T " # Add timestamps to history
+shopt -s cmdhist # Save multi-line commands as one command
+
+# History search on arrow keys
+bind '"\e[A": history-search-backward'
+bind '"\e[B": history-search-forward'
+bind '"\eOA": history-search-backward'
+bind '"\eOB": history-search-forward'
+
+# Settings for tab completion
+bind 'TAB:menu-complete'
+bind 'set show-all-if-unmodified'
+bind 'set completion-ignore-case on'
+bind 'set menu-complete-display-prefix on'
+
+# Default to human readable figures for df
+alias df='df -h'
+alias du='du -h'
+
+# Check if terminal supports color
+if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+    color_prompt=yes
+else
+    color_prompt=
+fi
+
+parse_git_branch() {
+     git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+}
+
+# Set colorful prompt
+if [ "$color_prompt" = yes ]; then
+    export PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[35m\]$(parse_git_branch)\[\033[00m\]\$ '
+else
+    export PS1='\u@\h:\w\$ '
+fi
+
+# Enable color support for various commands
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# More color aliases
+alias ll='ls -alF --color=auto'
+alias la='ls -A --color=auto'
+alias l='ls -CF --color=auto'
+alias less='less -R'  # Preserve colors in less
+alias tree='tree -C'  # Colored tree
+
+# Colorize man pages
+export LESS_TERMCAP_mb=$'\e[1;32m'
+export LESS_TERMCAP_md=$'\e[1;32m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_so=$'\e[01;33m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export LESS_TERMCAP_us=$'\e[1;4;31m'
+
+# Directory listing and navigation
+alias cd..='cd ..'
+alias cd...='cd ../..'
+alias cd....='cd ../../..'
+alias cd.....='cd ../../../..'
+alias cd......='cd ../../../../..'
+alias ls='ls --color=auto'
+alias ll='ls --color=auto -l'
+alias la='ls --color=auto -lA'
+
+# System info
+alias ports='netstat -tulanp'
+alias meminfo='free -h -l -t'
+alias cpuinfo='lscpu'
+
+# Misc
+alias less='less -r' # raw control characters
+alias hgrep='history | grep' # search improvements
+
+# Some more alias to avoid making mistakes:
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias mkdir='mkdir -pv'
+alias wget='wget -c'  # Resume downloads
+
+# Set terminal title to show current directory
+case "$TERM" in
+xterm*|rxvt*)
+    PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+    ;;
+*)
+    ;;
+esac
+
+# Extract various archive formats
+extract() {
+    if [ -f $1 ]; then
+        case $1 in
+            *.tar.bz2)   tar xjf $1     ;;
+            *.tar.gz)    tar xzf $1     ;;
+            *.bz2)       bunzip2 $1     ;;
+            *.rar)       unrar e $1     ;;
+            *.gz)        gunzip $1      ;;
+            *.tar)       tar xf $1      ;;
+            *.tbz2)      tar xjf $1     ;;
+            *.tgz)       tar xzf $1     ;;
+            *.zip)       unzip $1       ;;
+            *.Z)         uncompress $1  ;;
+            *.7z)        7z x $1        ;;
+            *)     echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
